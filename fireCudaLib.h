@@ -82,7 +82,7 @@
 #define Clatering  1
 
 #define INF 			9999999. /* or close enough */
-#define BLOCK_SIZE 4
+#define BLOCK_SIZE 16
 
 #define sizeModel (9)
 #define sizePart  (2)
@@ -522,8 +522,7 @@ __global__ void FireKernel_WindAndSlope(	float*,
 																					float*); 
 
 
-__global__ void FireKernel_SpreadAtNeighbors( float,
-											  											float*, 
+__global__ void FireKernel_SpreadAtNeighbors( float*, 
 											  											float*,
 											  											float*,
 											  											float*,
@@ -531,8 +530,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float,
 											  											float*,
 											  											float*,
 											  											float,
-																							unsigned int*,
-											  											unsigned int*);//11 
+																							float*);
 /*
  *------------------------------------------------------------------------------
  *  Function prototypes for fire behavior computations.

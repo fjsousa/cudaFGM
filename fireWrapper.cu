@@ -1,3 +1,5 @@
+#define WithCUBLAS 1
+
 /*
  *******************************************************************************
  *
@@ -27,11 +29,11 @@ int PrintMap ( float*, char* );
 
 /*timing structures*/
 typedef struct{
-	float total, init, loop, fireSpreadNo, fireSpread, examiningNeighbor;
+	float total, init, precond, fireSpreadNo, fireSpread, examiningNeighbor;
 } timeStructure;
 
 typedef struct{
-	    clock_t total, init, loop, fireSpreadNo, fireSpread, examiningNeighbor;
+	    clock_t total, init, precond, fireSpreadNo, fireSpread, examiningNeighbor;
 } clockTic;
 
 //Global variables
@@ -47,6 +49,7 @@ static float CellWd;				  				  	/* Cell width (E-W) in feet. */
 static float CellHt;					    				/* Cell height (N-S) in feet. */
 int Rows;   															/* Number of rows in each map. */
 int Cols;    															/* Number of columns in each map. */
+float* modelArray;					//Array for Models
 
 int main ( int argc, char **argv )
 {
@@ -54,16 +57,12 @@ int main ( int argc, char **argv )
 	unsigned int Scenario;
   FuelCatalogPtr catalog;     /* fuel catalog handle */
   float* modelArray_d;				//Array of continuous memory that holds the Model data in the device 
-	float* modelArray;					//Array for Models
 	static int n_itt = 0;      /* counter for number of time steps */
-	int row, col; 
+	int row, col, ignRow, ignCol; 
 	int cell, cells;  					/* neighbor index, total number of map cells */
   int N_isoLines;
 	float upperIsoLine;
-	unsigned int *lockMap;
-	unsigned int *lockMap_d;
-	unsigned int lockTime = 0u;
-	unsigned int *lockTime_d;
+	float SpreadMax_pre, Residue = INF, Residue_max, simTime;
 	float DistHV;
 	float* exactMap; /**cpuMap, *errorCPGP;*/
   size_t *fuelMap;            /* ptr to fuel model map */
@@ -97,18 +96,15 @@ int main ( int argc, char **argv )
 	char tmpchar[6]  = "";
 	FILE* IN, *timeData;
 	FILE *slope_file, *aspect_file;
-	/*DEBUG DEBUG DEBUG DEBUG
   float* azimuthMaxMap;
   float* eccentricityMap;
   float* phiEffWindMap;
-	float* SpreadMap;
-	FILE * debug_file;	
-	DEBUG DEBUG DEBUG DEBUG*/
+	float* RxIntensityMap;
 
 	start.total = clock();
 	
 	IN = fopen("RunSet.in","r");
-	fscanf(IN, "%d %d %d %d %d %f", &device, &Scenario, &Rows, &Cols, &N_isoLines, &upperIsoLine);
+	fscanf(IN, "%d %d %d %d %f %d %f", &device, &Scenario, &Rows, &Cols, &Residue_max, &N_isoLines, &upperIsoLine);
 	printf("\n\nStarting model "TAG" with Scn#%d, Node Size = %4dx%4d.\n",Scenario, Rows, Cols);
 	printf("\nTurn messages off for optimal performance\n");
 	
@@ -136,7 +132,7 @@ int main ( int argc, char **argv )
 		|| (azimuthMaxMap   	= (float *) calloc(cells, sizeof(float)))   == NULL
 		|| (eccentricityMap   = (float *) calloc(cells, sizeof(float)))   == NULL
 		|| (phiEffWindMap   	= (float *) calloc(cells, sizeof(float)))   == NULL
-		|| (RxIntesityMap   	= (float *) calloc(cells, sizeof(float)))   == NULL
+		|| (RxIntensityMap   	= (float *) calloc(cells, sizeof(float)))   == NULL
   	|| (slpMap   = (float *) calloc(cells, sizeof(float)))   == NULL
     || (aspMap   = (float *) calloc(cells, sizeof(float)))   == NULL
     || (wspdMap  = (float *) calloc(cells, sizeof(float)))   == NULL
@@ -157,8 +153,8 @@ int main ( int argc, char **argv )
 		Slope   = 0;    				
 		Aspect  = 0.0;    		
 		M1      = 0.05;    			
-		mapW = MetersToFeet(10000);
-		mapH = MetersToFeet(10000);		
+		mapW = MetersToFeet(7000);
+		mapH = MetersToFeet(7000);		
 		CellWd = mapW/(Cols -1);				  				  	
 		CellHt = mapH/(Rows -1);					    				
 		
@@ -171,24 +167,28 @@ int main ( int argc, char **argv )
 			wspdMap[cell]  = 88. * WindSpd;      //convert mph into ft/min 
 			wdirMap[cell]  = WindDir;
 			m1Map[cell]    = M1;
-			ignMap[cell]   = INF;
+			ignMap[cell]   = 1000;
+			ignMap_new[cell]   = 1000;
   	}
 
 		/* NOTE 5: set an ignition time & pattern (this ignites the middle cell). */
+		ignCol = Cols/2;
+		ignRow = Rows/2;
 		cell = Cols/2 + Cols*(Rows/2);
 		ignMap[cell] = 0;	
+		ignMap_new[cell] = 0;	
 	}
 
 	else if (Scenario == 1)
 	{
 		Model  = 1;      		
-		WindSpd = 4;     		
+		WindSpd = 5;     		
 		WindDir = 45;    	
 		Slope   = 0;  		
 		Aspect  = 0; 
-		M1      = 0.07;   	
-		mapW = MetersToFeet(10000);
-		mapH = MetersToFeet(10000);
+		M1      = 0.05;   	
+		mapW = MetersToFeet(7000);
+		mapH = MetersToFeet(7000);
 		CellWd = mapW/(Cols -1);				  				  	
 		CellHt = mapH/(Rows -1);					    				
 
@@ -200,11 +200,15 @@ int main ( int argc, char **argv )
 			wspdMap[cell]  = 88. * WindSpd;      //convert mph into ft/min 
 			wdirMap[cell]  = WindDir;
 			m1Map[cell]    = M1;
-			ignMap[cell]   = INF;
+			ignMap[cell]   = 1000;
+			ignMap_new[cell]   = 1000;
   	}
 
+		ignCol = Cols/4;
+		ignRow = Rows*3/4;
 		cell = Cols*1/4 + Cols*(Rows*3/4);
-		ignMap[cell] = 0;
+		ignMap[cell] = 0;	
+		ignMap_new[cell] = 0;	
 	}
 	else if (Scenario == 2)
 	{
@@ -214,8 +218,8 @@ int main ( int argc, char **argv )
 		Slope   = 0.5;  		
 		Aspect  = 23 + 180; 
 		M1      = 0.05;   	
-		mapW = MetersToFeet(10000);
-		mapH = MetersToFeet(10000);
+		mapW = MetersToFeet(7000);
+		mapH = MetersToFeet(7000);
 		CellWd = mapW/(Cols -1);				  				  	
 		CellHt = mapH/(Rows -1);					    				
 
@@ -227,11 +231,15 @@ int main ( int argc, char **argv )
 			wspdMap[cell]  = 88. * WindSpd;      //convert mph into ft/min 
 			wdirMap[cell]  = WindDir;
 			m1Map[cell]    = M1;
-			ignMap[cell]   = INF;
+			ignMap[cell]   = 1000;
+			ignMap_new[cell]   = 1000;
   	}
 
+		ignCol = Cols/4;
+		ignRow = Rows*3/4;
 		cell = Cols*1/4 + Cols*(Rows*3/4);
-		ignMap[cell] = 0;
+		ignMap[cell] = 0;	
+		ignMap_new[cell] = 0;	
 	}
 
 	//GOST SCENARIO only on Selial_Lean
@@ -239,11 +247,11 @@ int main ( int argc, char **argv )
 	else if (Scenario == 3)
 	{
 		Model  = 1;      
-		WindSpd = 5.14;//0;     
-		WindDir = 135;   
-		M1      = 0.07;
-		mapW = MetersToFeet(15000);
-		mapH = MetersToFeet(15000);	
+		WindSpd = 0;//0;     
+		WindDir = 0;   
+		M1      = 0.1;
+		mapW = MetersToFeet(7000);
+		mapH = MetersToFeet(7000);	
 		CellWd = mapW/(Cols -1);				  				  	
 		CellHt = mapH/(Rows -1);					    				
 	
@@ -265,10 +273,10 @@ int main ( int argc, char **argv )
 				wdirMap[cell]  = WindDir;
 				m1Map[cell]    = M1;
       	ignMap[cell]   = INF;
-				lockMap[cell]  = 0u;
   		}
 		}
-
+		ignCol = Cols/4;
+		ignRow = Rows/4;
 		cell = Cols/4 + Cols*Rows/4;
   	ignMap[cell] = 0.0;
   }
@@ -285,13 +293,13 @@ int main ( int argc, char **argv )
 	DistHV = CellWd ;
 	///////////////////////////////////////////////////////////////////////////
 	//Store catalog in Global Cuda memory
-	modelArray_d = CudaModelData(catalog, modelArray);
+	modelArray_d = CudaModelData(catalog);
 	#if Clatering	
 	printf("\nCatalog passed to Device.\n");
 	#endif
 	///////////////////////////////////////////////////////////////////////////
 	//Preconditioned ignamap
-	start.main = clock();
+	start.precond = clock();
 	if (Scenario > 1)
 	{
 		SpreadMax_pre = NoWindNoSlope(0, m1Map[0], fuelMap[0], modelArray, RxIntensityMap );
@@ -311,6 +319,8 @@ int main ( int argc, char **argv )
 
 		ignMap = ExactElipse( ignRow, ignCol, 0, SpreadMax_pre, eccentricityMap[0], azimuthMaxMap[0]);
 	}
+	end.precond = clock();
+	times.precond = ((float) (end.precond - start.precond))/CLOCKS_PER_SEC;
 	///////////////////////////////////////////////////////////////////////////
 	//Spread No Wind No Slope
 	start.fireSpreadNo = clock();
@@ -399,15 +409,6 @@ int main ( int argc, char **argv )
 	#endif
 	
 	///////////////////////////////////////////////////////////////////////////
-	//Build Exact Matrices
-	if (Scenario == 0)
-		exactMap = ExactCircle( Rows/2, Cols/2, 0, Spread0Map[0]);
-	else if (Scenario == 1)
-		exactMap = ExactElipse( Rows*3/4, Cols*1/4, 0, SpreadMaxMap[0], eccentricityMap[Cols/2 + Cols*Rows/2], azimuthMaxMap[Cols/2 + Cols*Rows/2]);
-	else if (Scenario == 2)
-		exactMap = ExactElipse( Rows*3/4, Cols*1/4, 0, SpreadMaxMap[0], eccentricityMap[Cols/2 + Cols*Rows/2], azimuthMaxMap[Cols/2 + Cols*Rows/2]);
-
-	///////////////////////////////////////////////////////////////////////////
 	//Spread at Neighbors
 	start.examiningNeighbor = clock();
 	cudaMalloc((void**)&ignMap_d,      cells*sizeof(float));
@@ -426,7 +427,7 @@ int main ( int argc, char **argv )
 	{
 		n_itt++;
 		
-		FireKernel_SpreadAtNeighbors<<<dimGrid, dimBlock>>> (	ignMap_d, 
+		FireKernel_SpreadAtNeighbors<<<dimGrid, dimBlock>>>(	ignMap_d, 
 																													ignMap_new_d,
     			  																							spread0Map_d,
     			  																							spreadMaxMap_d,
@@ -434,12 +435,23 @@ int main ( int argc, char **argv )
     			  																							eccentricityMap_d,
     			  																							phiEffWindMap_d,
     			  																							DistHV,
-																													diff_d);//11
+																													diff_d);//9
 
 	
+		/*cudaMemcpy(ignMap_new, ignMap_new_d, cells*sizeof(float), cudaMemcpyDeviceToHost);
+		cudaMemcpy(ignMap, ignMap_d, cells*sizeof(float), cudaMemcpyDeviceToHost);
+		
+  	PrintMap(ignMap, "ignMap.dat");
+ 	 	PrintMap(ignMap_new, "ignMap_new.dat");
+		
+		char Continue;
+		gets(&Continue);
+*/
+		#if WithCUBLAS
 		Residue = cublasSasum(cells, diff_d, 1);
 		cublasScopy(cells, ignMap_new_d, 1, ignMap_d, 1); 
-		printf("\nResidue = %f  @ itt %d\n", Residue,  n_itt);
+		//printf("\nResidue = %f  @ itt %d\n", Residue,  n_itt);
+		#endif
 	}
 
 	cudaMemcpy( ignMap,   ignMap_d,  cells*sizeof(float), cudaMemcpyDeviceToHost);
@@ -474,6 +486,29 @@ int main ( int argc, char **argv )
 	cudaMemcpy(&SpreadMax,    &spreadMaxMap_d[Cols/2 + Rows/2*Cols],    sizeof(float), cudaMemcpyDeviceToHost);
 	cudaMemcpy(&eccentricity, &eccentricityMap_d[Cols/2 + Rows/2*Cols], sizeof(float), cudaMemcpyDeviceToHost);
 	cudaMemcpy(&azimuthMax,   &azimuthMaxMap_d[Cols/2 + Rows/2*Cols],   sizeof(float), cudaMemcpyDeviceToHost);
+	
+	//Maximum ignition time
+	simTime = 0;
+	for (cell = 0; cell < Rows*Cols; cell++)
+		if (ignMap[cell] > simTime ) simTime = ignMap[cell];
+ 	
+	//Error related stuff
+	if (Scenario == 0)
+	{
+		exactMap = ExactCircle( ignRow, ignCol, 0, Spread0);
+		errorStuff(N_isoLines, upperIsoLine, Rows, CellHt, Scenario, exactMap, ignMap, simTime);
+  PrintMap(ignMap, "ignMap.dat");
+	}
+	else if (Scenario == 1)
+	{
+		exactMap = ExactElipse( ignRow, ignCol, 0, SpreadMax, eccentricity, azimuthMax);
+		errorStuff(N_isoLines, upperIsoLine, Rows, CellHt, Scenario, exactMap, ignMap, simTime);
+	}
+	else if (Scenario == 2)
+	{
+		exactMap = ExactElipse( ignRow, ignCol, 0, SpreadMax, eccentricity, azimuthMax);
+		errorStuff(N_isoLines, upperIsoLine, Rows, CellHt, Scenario, exactMap, ignMap, simTime);
+	}
 
 	//print ignMap for numerical solution
 	strcat(fileString, "ign");
@@ -533,29 +568,23 @@ int main ( int argc, char **argv )
 		strcat(fileString, ".dat");
 	
 	timeData = fopen(fileString,"a");
-	fprintf(timeData, "%5d %8.2f %8.2f %7.1f %7d\n", Rows, times.fireSpreadNo + times.fireSpread + times.examiningNeighbor, times.total, timeNow, n_itt);
+	fprintf(timeData, "%5d %8.3f %8.3f %5.2f %7.1f %7d\n", Rows, 
+	times.precond + times.fireSpreadNo + times.fireSpread + times.examiningNeighbor, 
+	times.precond, 
+	(times.precond + times.fireSpreadNo + times.fireSpread + times.examiningNeighbor)/times.total*100 , 
+	simTime, n_itt);
 
 	#if Clatering
 	printf("\nPrinting for timing data... Done.\n");
 	#endif
- 	//Error related stuff
-	if (Scenario == 0)
-	{
-		exactMap = ExactCircle( Rows/2, Cols/2, 0, Spread0);
-		errorStuff(N_isoLines, upperIsoLine, Rows, CellHt, Scenario, exactMap, ignMap, timeNow);
-	}
-	else if (Scenario == 1)
-	{
-		exactMap = ExactElipse( Rows*3/4, Cols*1/4, 0, SpreadMax, eccentricity, azimuthMax);
-		errorStuff(N_isoLines, upperIsoLine, Rows, CellHt, Scenario, exactMap, ignMap, timeNow);
-	}
-	else if (Scenario == 2)
-	{
-		exactMap = ExactElipse( Rows*3/4, Cols*1/4, 0, SpreadMax, eccentricity, azimuthMax);
-		errorStuff(N_isoLines, upperIsoLine, Rows, CellHt, Scenario, exactMap, ignMap, timeNow);
-	}
+	
 
 	#if Clatering
+	printf("%5d %8.3f %8.3f %5.2f %7.1f %7d\n", Rows, 
+	times.precond + times.fireSpreadNo + times.fireSpread + times.examiningNeighbor, 
+	times.precond, 
+	(times.precond + times.fireSpreadNo + times.fireSpread + times.examiningNeighbor)/times.total*100 , 
+	simTime, n_itt);
 	printf("\nPrinting for Error data. Done.\n");
 	#endif
 	/*
@@ -849,7 +878,7 @@ void Preprocessor(FuelCatalogPtr catalog)
 //			->flamePtr[] (size of flame classes)
 //
 ///////////////////////////////////////////////////////////////////////////////
-float* CudaModelData(FuelCatalogPtr catalog, float* modelArray)
+float* CudaModelData(FuelCatalogPtr catalog)
 {
 	float* modelArray_d;
 	int sizeModels;				//Size of Models Array
@@ -871,9 +900,9 @@ float* CudaModelData(FuelCatalogPtr catalog, float* modelArray)
 		}
 	}
 
-#if Clatering
+	#if Clatering
 	printf("\nSize of Model Array: %d\n", sizeModels);
-#endif
+	#endif
 
 	//malloc model array
 	modelArray = (float*)malloc(sizeModels*sizeof(float));

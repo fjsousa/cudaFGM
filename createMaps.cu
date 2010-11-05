@@ -44,7 +44,7 @@ double* F_reSize(int N, int M, double W, double H)
 		for (col = 0; col < m; col++)
 		{
 			fscanf(original_file, "%lf", &original[col + m*row]);
-			original[col + m*row] *=4;
+			original[col + m*row] *=0.4;
 		}
 	}
 	

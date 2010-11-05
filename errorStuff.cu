@@ -105,8 +105,6 @@ int errorStuff(int N_isoLines, float upperIsoLine, int Rows, float CellHt, int S
 	fprintf(SEIdata, "\n");
 	
 	//Close stuff
-	free(ignExact);
-	free(ignNumeric);
 	free(ignError);
 	free(isoTime); 
 	free(SEI);

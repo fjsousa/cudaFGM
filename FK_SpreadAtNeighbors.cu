@@ -15,7 +15,6 @@
 
 __global__ void FireKernel_SpreadAtNeighbors( float* ignMap, 
 											  											float* ignMap_new,
-																							float* timeNext,
 											  											float* spread0Map,
 											  											float* spreadMaxMap,
 											  											float* azimuthMaxMap,
@@ -30,7 +29,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 	__shared__ float spreadAny_sh[BLOCK_SIZE][BLOCK_SIZE];
 	__shared__ float ignTime_sh[BLOCK_SIZE][BLOCK_SIZE];
 	__shared__ float dir_sh[BLOCK_SIZE][BLOCK_SIZE];
-
+	
 	/*int row  =threadIdx.y + blockIdx.y*blockDim.y;
 	int col  =threadIdx.x + blockIdx.x*blockDim.x;
 	int cell =col + Cols*row;*/
@@ -39,11 +38,13 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 	#define cell (col + Cols*row)
 	
 	//Updates ign Map from last iteration
-	ignCell = ignMap[cell];
+	//ignCell = ignMap[cell];
+	//ignMap_new[cell] = 101;
+	//ignMap[cell] = 1;
 
+	ignCell = ignMap[cell];
 	if (ignCell > 0)
-	{
-		
+	{	
 		ignTime_min = INF;
 
 		///////////////////////////////////////////////////////////////////////////
@@ -80,7 +81,8 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 			ignTime_sh[thx][thy] = ignMap[ncell] + DistHV / spreadAny_sh[thx][thy];
 
 			
-			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min);
+			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min)
+										+ ignTime_min *      ( ignTime_sh[thx][thy] >= ignTime_min);
 		
 		}
 		
@@ -121,7 +123,8 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 			ignTime_sh[thx][thy] = ignMap[ncell] + DistD / spreadAny_sh[thx][thy];
 
 			
-			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min);
+			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min)
+										+ ignTime_min *      ( ignTime_sh[thx][thy] >= ignTime_min);
 		}
 		#undef RowN
 		#undef ColN
@@ -161,7 +164,8 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 			ignTime_sh[thx][thy] = ignMap[ncell] + DistHV / spreadAny_sh[thx][thy];
 
 			
-			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min);
+			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min)
+										+ ignTime_min*      ( ignTime_sh[thx][thy] >= ignTime_min);
 		}	
 		#undef RowN
 		#undef ColN
@@ -201,7 +205,8 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 			ignTime_sh[thx][thy] = ignMap[ncell] + DistD/ spreadAny_sh[thx][thy];
 
 			
-			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min);
+			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min)
+										+ ignTime_min *      ( ignTime_sh[thx][thy] >= ignTime_min);
 		}
 		#undef RowN
 		#undef ColN
@@ -240,8 +245,9 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 
 			ignTime_sh[thx][thy] = ignMap[ncell] + DistHV / spreadAny_sh[thx][thy];
 
+			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min)
+										+ ignTime_min *      ( ignTime_sh[thx][thy] >= ignTime_min);
 			
-			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min);
 		}	
 		#undef RowN
 		#undef ColN
@@ -282,7 +288,8 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 			ignTime_sh[thx][thy] = ignMap[ncell] + DistD / spreadAny_sh[thx][thy];
 
 			
-			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min);
+			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min)
+										+ ignTime_min *      ( ignTime_sh[thx][thy] >= ignTime_min);
 		}	 
 		#undef RowN
 		#undef ColN
@@ -322,7 +329,8 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 			ignTime_sh[thx][thy] = ignMap[ncell] + DistHV / spreadAny_sh[thx][thy];
 
 			
-			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min);
+			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min)
+										+ ignTime_min *      ( ignTime_sh[thx][thy] >= ignTime_min);
 		}
 		#undef RowN
 		#undef ColN
@@ -362,7 +370,8 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 			ignTime_sh[thx][thy] = ignMap[ncell] + DistD/ spreadAny_sh[thx][thy];
 
 			
-			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min);
+			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min)
+										+ ignTime_min *      ( ignTime_sh[thx][thy] >= ignTime_min);
 		}
 		#undef RowN
 		#undef ColN

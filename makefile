@@ -9,10 +9,10 @@
 # The following rules work for UnixWare 2.0.
 #CC = gcc
 NVCC = nvcc
-CUDAFLAGS = -arch=sm_13 -O3 
+CUDAFLAGS = -O3#-arch=sm_13 
 
 LIBS = -lm
-CUDALIBS = -lcudart -lm#-lcublas -lcudart 
+CUDALIBS = -lcudart -lm -lcublas 
 
 %.o : %.cu
 	$(NVCC) $(CUDAFLAGS)  -c $< 
@@ -23,6 +23,8 @@ OBJ =	fireCudaLib.o\
 			FK_NoWindNoSlope.o\
 			FK_SpreadAtNeighbors.o\
 			FK_WindAndSlope.o\
+			NoWindNoSlope.o\
+			WindAndSlope.o\
 			errorStuff.o\
 			createMaps.o
 
