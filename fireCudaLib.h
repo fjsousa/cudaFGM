@@ -82,7 +82,7 @@
 #define Clatering  1
 
 #define INF 			9999999. /* or close enough */
-#define BLOCK_SIZE 16
+#define BLOCK_SIZE 8
 
 #define sizeModel (9)
 #define sizePart  (2)

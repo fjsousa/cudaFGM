@@ -29,11 +29,11 @@ int PrintMap ( float*, char* );
 
 /*timing structures*/
 typedef struct{
-	float total, init, precond, fireSpreadNo, fireSpread, examiningNeighbor;
+	float total, init, precond, fireSpreadNo, fireSpread, examiningNeighbor, cublas;
 } timeStructure;
 
 typedef struct{
-	    clock_t total, init, precond, fireSpreadNo, fireSpread, examiningNeighbor;
+	    clock_t total, init, precond, fireSpreadNo, fireSpread, examiningNeighbor, cublas;
 } clockTic;
 
 //Global variables
@@ -101,6 +101,8 @@ int main ( int argc, char **argv )
   float* phiEffWindMap;
 	float* RxIntensityMap;
 
+	
+	
 	start.total = clock();
 	
 	IN = fopen("RunSet.in","r");
@@ -114,6 +116,9 @@ int main ( int argc, char **argv )
 	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 dimGrid(Rows/BLOCK_SIZE, Cols/BLOCK_SIZE);
 	
+	
+	start.cublas = clock();
+	
 	#if WithCUBLAS
 	//Init Cublas
 	if( cublasInit() != CUBLAS_STATUS_SUCCESS)
@@ -124,6 +129,8 @@ int main ( int argc, char **argv )
 	else
 		printf("\nCUBLAS initialized\n");
 	#endif
+	end.cublas = clock();
+	times.cublas = ((float) (end.cublas - start.cublas))/CLOCKS_PER_SEC;
 
 	/* NOTE 3: allocate all the maps. */
   cells = Rows * Cols;
@@ -568,10 +575,13 @@ int main ( int argc, char **argv )
 		strcat(fileString, ".dat");
 	
 	timeData = fopen(fileString,"a");
-	fprintf(timeData, "%5d %8.3f %8.3f %5.2f %7.1f %7d\n", Rows, 
-	times.precond + times.fireSpreadNo + times.fireSpread + times.examiningNeighbor, 
-	times.precond, 
-	(times.precond + times.fireSpreadNo + times.fireSpread + times.examiningNeighbor)/times.total*100 , 
+	fprintf(timeData,"%5d %f %f %f %f %f %f %f %f %f %f %7d\n", Rows, 
+	times.precond, times.fireSpreadNo, times.fireSpread, times.examiningNeighbor, 
+	times.cublas,
+	times.precond + times.fireSpreadNo + times.fireSpread + times.examiningNeighbor,
+	times.fireSpreadNo + times.fireSpread + times.examiningNeighbor,
+	times.total,
+	(times.precond + times.fireSpreadNo + times.fireSpread + times.examiningNeighbor)/(times.total)*100 ,
 	simTime, n_itt);
 
 	#if Clatering
@@ -580,10 +590,13 @@ int main ( int argc, char **argv )
 	
 
 	#if Clatering
-	printf("%5d %8.3f %8.3f %5.2f %7.1f %7d\n", Rows, 
-	times.precond + times.fireSpreadNo + times.fireSpread + times.examiningNeighbor, 
-	times.precond, 
-	(times.precond + times.fireSpreadNo + times.fireSpread + times.examiningNeighbor)/times.total*100 , 
+	printf("%5d %f %f %f %f %f %f %f %f %f %f %7d\n", Rows, 
+	times.precond, times.fireSpreadNo, times.fireSpread, times.examiningNeighbor, 
+	times.cublas,
+	times.precond + times.fireSpreadNo + times.fireSpread + times.examiningNeighbor,
+	times.fireSpreadNo + times.fireSpread + times.examiningNeighbor,
+	times.total,
+	(times.precond + times.fireSpreadNo + times.fireSpread + times.examiningNeighbor)/(times.total)*100 ,
 	simTime, n_itt);
 	printf("\nPrinting for Error data. Done.\n");
 	#endif
