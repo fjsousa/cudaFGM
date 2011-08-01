@@ -23,7 +23,7 @@ upperIsoLines[1]=1000
 upperIsoLines[2]=1000
 upperIsoLines[3]=3000
 
-for ((i=3; i<$nScn; i++)); do	
+for ((i=0; i<$nScn; i++)); do	
 	for ((j=0; j<$RUNS; j++)); do
 		echo 0 $i ${NODES[$j]} ${NODES[$j]}  $Residue $N_isoLines ${upperIsoLines[$i]} > RunSet.in
 		./fireCuda

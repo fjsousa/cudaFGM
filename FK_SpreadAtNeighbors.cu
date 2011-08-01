@@ -376,77 +376,48 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 		#undef RowN
 		#undef ColN
 		#undef azimuth
-/*	
+	
 		#if Stencil16
 		///////////////////////////////////////////////////////////////////////////
 		//a Neighbor 
 		#define RowN    (-2)
 		#define ColN    (-1)
-		#define azimuth (333.43494882292202)
+		#define azimuth (153.434948823)//(333.43494882292202)
 		#define Dist (sqrtf((RowN*RowN + ColN*ColN)*DistHV*DistHV))
 		
 		nrow = row + RowN;
 		ncol = col + ColN;
 		ncell = ncol + nrow*Cols;
-		ignNcell = ignMap[ncell];
-
-		if(nrow >= 0 && nrow < Rows && ncol >= 0 && ncol < Cols &&
-		   ignNcell > timeNow && spreadMaxMap[cell] >= Smidgen)
+		
+		if(nrow >= 0 && nrow < Rows && ncol >= 0 && ncol < Cols)
+		
 		{
 			//"SpreadAtAzimuth"
-			if (phiEffWindMap[cell] < Smidgen && azimuthMaxMap[cell] == azimuth)
-				spreadAny_sh[thx][thy] = spreadMaxMap[cell];
+			if (phiEffWindMap[ncell] < Smidgen && azimuthMaxMap[ncell] == azimuth)
+				spreadAny_sh[thx][thy] = spreadMaxMap[ncell];
 			else
 			{
-				if ((dir_sh[thx][thy] = fabsf(azimuthMaxMap[cell] - azimuth)) > 180)
+				if ((dir_sh[thx][thy] = fabsf(azimuthMaxMap[ncell] - azimuth)) > 180)
 					dir_sh[thx][thy] = 360. - dir_sh[thx][thy];
 			
 				dir_sh[thx][thy] = DegToRad(dir_sh[thx][thy]);
 
-				eccentricity = eccentricityMap[cell];
-				spreadAny_sh[thx][thy] = spreadMaxMap[cell]*(1-eccentricity)/
+				eccentricity = eccentricityMap[ncell];
+				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
 				if (spreadAny_sh[thx][thy] > INF)
-					spreadAny_sh[thx][thy] = spread0Map[cell];
+					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
-			ignTime_sh[thx][thy] = timeNow + Dist / spreadAny_sh[thx][thy];
+			ignTime_sh[thx][thy] = ignMap[ncell] + Dist/ spreadAny_sh[thx][thy];
 
-			if(ignTime_sh[thx][thy] < ignNcell)
-			{
-				looping = true;
-				while(looping)
-				{
-					if (atomicExch(&(lockMap[ncell]), 1u) == 0u)
-					{
-						looping = false;
-						if(ignTime_sh[thx][thy] < ignMap[ncell])
-						{
-							ignMap[ncell] = ignTime_sh[thx][thy];
-						}	
-						atomicExch(&(lockMap[ncell]), 0u);
-					}
-				}
-			}
-			//Update timeNext
-			if( ignTime_sh[thx][thy] < *timeNext )
-			{	
-				looping = true;
-				while(looping)
-				{
-					if (atomicExch(lockTime, 1u) == 0u)
-					{
-						looping = false;
-						if(ignTime_sh[thx][thy] < *timeNext)
-						{
-							*timeNext = ignTime_sh[thx][thy];
-						}
-						atomicExch(lockTime, 0u);
-					}
-				}
-			}	
+			
+			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min)
+										+ ignTime_min *      ( ignTime_sh[thx][thy] >= ignTime_min);
 		}
+		
+		
 		#undef RowN
 		#undef ColN
 		#undef azimuth
@@ -455,71 +426,41 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 		//b Neighbor 
 		#define RowN    (-2)
 		#define ColN    (1)
-		#define azimuth (26.56505117707799)
+		#define azimuth  (206.565051177)//  (26.56505117707799)
 		#define Dist (sqrtf((RowN*RowN + ColN*ColN)*DistHV*DistHV))
 		
 		nrow = row + RowN;
 		ncol = col + ColN;
 		ncell = ncol + nrow*Cols;
-		ignNcell = ignMap[ncell];
 
-		if(nrow >= 0 && nrow < Rows && ncol >= 0 && ncol < Cols &&
-		   ignNcell > timeNow && spreadMaxMap[cell] >= Smidgen)
+		if(nrow >= 0 && nrow < Rows && ncol >= 0 && ncol < Cols)
+		
 		{
 			//"SpreadAtAzimuth"
-			if (phiEffWindMap[cell] < Smidgen && azimuthMaxMap[cell] == azimuth)
-				spreadAny_sh[thx][thy] = spreadMaxMap[cell];
+			if (phiEffWindMap[ncell] < Smidgen && azimuthMaxMap[ncell] == azimuth)
+				spreadAny_sh[thx][thy] = spreadMaxMap[ncell];
 			else
 			{
-				if ((dir_sh[thx][thy] = fabsf(azimuthMaxMap[cell] - azimuth)) > 180)
+				if ((dir_sh[thx][thy] = fabsf(azimuthMaxMap[ncell] - azimuth)) > 180)
 					dir_sh[thx][thy] = 360. - dir_sh[thx][thy];
 			
 				dir_sh[thx][thy] = DegToRad(dir_sh[thx][thy]);
 
-				eccentricity = eccentricityMap[cell];
-				spreadAny_sh[thx][thy] = spreadMaxMap[cell]*(1-eccentricity)/
+				eccentricity = eccentricityMap[ncell];
+				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
 				if (spreadAny_sh[thx][thy] > INF)
-					spreadAny_sh[thx][thy] = spread0Map[cell];
+					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
-			ignTime_sh[thx][thy] = timeNow + Dist / spreadAny_sh[thx][thy];
+			ignTime_sh[thx][thy] = ignMap[ncell] + Dist/ spreadAny_sh[thx][thy];
 
-			if(ignTime_sh[thx][thy] < ignNcell)
-			{
-				looping = true;
-				while(looping)
-				{
-					if (atomicExch(&(lockMap[ncell]), 1u) == 0u)
-					{
-						looping = false;
-						if(ignTime_sh[thx][thy] < ignMap[ncell])
-						{
-							ignMap[ncell] = ignTime_sh[thx][thy];
-						}	
-						atomicExch(&(lockMap[ncell]), 0u);
-					}
-				}
-			}
-			//Update timeNext
-			if( ignTime_sh[thx][thy] < *timeNext )
-			{	
-				looping = true;
-				while(looping)
-				{
-					if (atomicExch(lockTime, 1u) == 0u)
-					{
-						looping = false;
-						if(ignTime_sh[thx][thy] < *timeNext)
-						{
-							*timeNext = ignTime_sh[thx][thy];
-						}
-						atomicExch(lockTime, 0u);
-					}
-				}
-			}	
+			
+			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min)
+										+ ignTime_min *      ( ignTime_sh[thx][thy] >= ignTime_min);
 		}
+
 		#undef RowN
 		#undef ColN
 		#undef azimuth
@@ -529,70 +470,39 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 		//c Neighbor 
 		#define RowN    (-1)
 		#define ColN    (-2)
-		#define azimuth (296.56505117707798)
+		#define azimuth (116.565051177)//  (296.56505117707798)
 		#define Dist (sqrtf((RowN*RowN + ColN*ColN)*DistHV*DistHV))
 		
 		nrow = row + RowN;
 		ncol = col + ColN;
 		ncell = ncol + nrow*Cols;
-		ignNcell = ignMap[ncell];
 
-		if(nrow >= 0 && nrow < Rows && ncol >= 0 && ncol < Cols &&
-		   ignNcell > timeNow && spreadMaxMap[cell] >= Smidgen)
+		if(nrow >= 0 && nrow < Rows && ncol >= 0 && ncol < Cols)
+		
 		{
 			//"SpreadAtAzimuth"
-			if (phiEffWindMap[cell] < Smidgen && azimuthMaxMap[cell] == azimuth)
-				spreadAny_sh[thx][thy] = spreadMaxMap[cell];
+			if (phiEffWindMap[ncell] < Smidgen && azimuthMaxMap[ncell] == azimuth)
+				spreadAny_sh[thx][thy] = spreadMaxMap[ncell];
 			else
 			{
-				if ((dir_sh[thx][thy] = fabsf(azimuthMaxMap[cell] - azimuth)) > 180)
+				if ((dir_sh[thx][thy] = fabsf(azimuthMaxMap[ncell] - azimuth)) > 180)
 					dir_sh[thx][thy] = 360. - dir_sh[thx][thy];
 			
 				dir_sh[thx][thy] = DegToRad(dir_sh[thx][thy]);
 
-				eccentricity = eccentricityMap[cell];
-				spreadAny_sh[thx][thy] = spreadMaxMap[cell]*(1-eccentricity)/
+				eccentricity = eccentricityMap[ncell];
+				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
 				if (spreadAny_sh[thx][thy] > INF)
-					spreadAny_sh[thx][thy] = spread0Map[cell];
+					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
-			ignTime_sh[thx][thy] = timeNow + Dist / spreadAny_sh[thx][thy];
+			ignTime_sh[thx][thy] = ignMap[ncell] + Dist/ spreadAny_sh[thx][thy];
 
-			if(ignTime_sh[thx][thy] < ignNcell)
-			{
-				looping = true;
-				while(looping)
-				{
-					if (atomicExch(&(lockMap[ncell]), 1u) == 0u)
-					{
-						looping = false;
-						if(ignTime_sh[thx][thy] < ignMap[ncell])
-						{
-							ignMap[ncell] = ignTime_sh[thx][thy];
-						}	
-						atomicExch(&(lockMap[ncell]), 0u);
-					}
-				}
-			}
-			//Update timeNext
-			if( ignTime_sh[thx][thy] < *timeNext )
-			{	
-				looping = true;
-				while(looping)
-				{
-					if (atomicExch(lockTime, 1u) == 0u)
-					{
-						looping = false;
-						if(ignTime_sh[thx][thy] < *timeNext)
-						{
-							*timeNext = ignTime_sh[thx][thy];
-						}
-						atomicExch(lockTime, 0u);
-					}
-				}
-			}	
+			
+			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min)
+										+ ignTime_min *      ( ignTime_sh[thx][thy] >= ignTime_min);
 		}
 		#undef RowN
 		#undef ColN
@@ -603,71 +513,41 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 		//d Neighbor 
 		#define RowN    (-1)
 		#define ColN    (2)
-		#define azimuth (63.43494882292201)
+		#define azimuth  (243.434948823)// (63.43494882292201)
 		#define Dist (sqrtf((RowN*RowN + ColN*ColN)*DistHV*DistHV))
 		
 		nrow = row + RowN;
 		ncol = col + ColN;
 		ncell = ncol + nrow*Cols;
-		ignNcell = ignMap[ncell];
 
-		if(nrow >= 0 && nrow < Rows && ncol >= 0 && ncol < Cols &&
-		   ignNcell > timeNow && spreadMaxMap[cell] >= Smidgen)
+		if(nrow >= 0 && nrow < Rows && ncol >= 0 && ncol < Cols)
+		
 		{
 			//"SpreadAtAzimuth"
-			if (phiEffWindMap[cell] < Smidgen && azimuthMaxMap[cell] == azimuth)
-				spreadAny_sh[thx][thy] = spreadMaxMap[cell];
+			if (phiEffWindMap[ncell] < Smidgen && azimuthMaxMap[ncell] == azimuth)
+				spreadAny_sh[thx][thy] = spreadMaxMap[ncell];
 			else
 			{
-				if ((dir_sh[thx][thy] = fabsf(azimuthMaxMap[cell] - azimuth)) > 180)
+				if ((dir_sh[thx][thy] = fabsf(azimuthMaxMap[ncell] - azimuth)) > 180)
 					dir_sh[thx][thy] = 360. - dir_sh[thx][thy];
 			
 				dir_sh[thx][thy] = DegToRad(dir_sh[thx][thy]);
 
-				eccentricity = eccentricityMap[cell];
-				spreadAny_sh[thx][thy] = spreadMaxMap[cell]*(1-eccentricity)/
+				eccentricity = eccentricityMap[ncell];
+				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
 				if (spreadAny_sh[thx][thy] > INF)
-					spreadAny_sh[thx][thy] = spread0Map[cell];
+					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
-			ignTime_sh[thx][thy] = timeNow + Dist / spreadAny_sh[thx][thy];
+			ignTime_sh[thx][thy] = ignMap[ncell] + Dist/ spreadAny_sh[thx][thy];
 
-			if(ignTime_sh[thx][thy] < ignNcell)
-			{
-				looping = true;
-				while(looping)
-				{
-					if (atomicExch(&(lockMap[ncell]), 1u) == 0u)
-					{
-						looping = false;
-						if(ignTime_sh[thx][thy] < ignMap[ncell])
-						{
-							ignMap[ncell] = ignTime_sh[thx][thy];
-						}	
-						atomicExch(&(lockMap[ncell]), 0u);
-					}
-				}
-			}
-			//Update timeNext
-			if( ignTime_sh[thx][thy] < *timeNext )
-			{	
-				looping = true;
-				while(looping)
-				{
-					if (atomicExch(lockTime, 1u) == 0u)
-					{
-						looping = false;
-						if(ignTime_sh[thx][thy] < *timeNext)
-						{
-							*timeNext = ignTime_sh[thx][thy];
-						}
-						atomicExch(lockTime, 0u);
-					}
-				}
-			}	
+			
+			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min)
+										+ ignTime_min *      ( ignTime_sh[thx][thy] >= ignTime_min);
 		}
+		
 		#undef RowN
 		#undef ColN
 		#undef azimuth
@@ -677,71 +557,41 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 		//e Neighbor 
 		#define RowN    (1)
 		#define ColN    (-2)
-		#define azimuth (243.43494882292202)
+		#define azimuth (63.434948823) //(243.43494882292202)
 		#define Dist (sqrtf((RowN*RowN + ColN*ColN)*DistHV*DistHV))
 		
 		nrow = row + RowN;
 		ncol = col + ColN;
 		ncell = ncol + nrow*Cols;
-		ignNcell = ignMap[ncell];
 
-		if(nrow >= 0 && nrow < Rows && ncol >= 0 && ncol < Cols &&
-		   ignNcell > timeNow && spreadMaxMap[cell] >= Smidgen)
+		if(nrow >= 0 && nrow < Rows && ncol >= 0 && ncol < Cols)
+		
 		{
 			//"SpreadAtAzimuth"
-			if (phiEffWindMap[cell] < Smidgen && azimuthMaxMap[cell] == azimuth)
-				spreadAny_sh[thx][thy] = spreadMaxMap[cell];
+			if (phiEffWindMap[ncell] < Smidgen && azimuthMaxMap[ncell] == azimuth)
+				spreadAny_sh[thx][thy] = spreadMaxMap[ncell];
 			else
 			{
-				if ((dir_sh[thx][thy] = fabsf(azimuthMaxMap[cell] - azimuth)) > 180)
+				if ((dir_sh[thx][thy] = fabsf(azimuthMaxMap[ncell] - azimuth)) > 180)
 					dir_sh[thx][thy] = 360. - dir_sh[thx][thy];
 			
 				dir_sh[thx][thy] = DegToRad(dir_sh[thx][thy]);
 
-				eccentricity = eccentricityMap[cell];
-				spreadAny_sh[thx][thy] = spreadMaxMap[cell]*(1-eccentricity)/
+				eccentricity = eccentricityMap[ncell];
+				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
 				if (spreadAny_sh[thx][thy] > INF)
-					spreadAny_sh[thx][thy] = spread0Map[cell];
+					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
-			ignTime_sh[thx][thy] = timeNow + Dist / spreadAny_sh[thx][thy];
+			ignTime_sh[thx][thy] = ignMap[ncell] + Dist/ spreadAny_sh[thx][thy];
 
-			if(ignTime_sh[thx][thy] < ignNcell)
-			{
-				looping = true;
-				while(looping)
-				{
-					if (atomicExch(&(lockMap[ncell]), 1u) == 0u)
-					{
-						looping = false;
-						if(ignTime_sh[thx][thy] < ignMap[ncell])
-						{
-							ignMap[ncell] = ignTime_sh[thx][thy];
-						}	
-						atomicExch(&(lockMap[ncell]), 0u);
-					}
-				}
-			}
-			//Update timeNext
-			if( ignTime_sh[thx][thy] < *timeNext )
-			{	
-				looping = true;
-				while(looping)
-				{
-					if (atomicExch(lockTime, 1u) == 0u)
-					{
-						looping = false;
-						if(ignTime_sh[thx][thy] < *timeNext)
-						{
-							*timeNext = ignTime_sh[thx][thy];
-						}
-						atomicExch(lockTime, 0u);
-					}
-				}
-			}	
+			
+			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min)
+										+ ignTime_min *      ( ignTime_sh[thx][thy] >= ignTime_min);
 		}
+		
 		#undef RowN
 		#undef ColN
 		#undef azimuth
@@ -751,70 +601,39 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 		//f Neighbor 
 		#define RowN    (1)
 		#define ColN    (2)
-		#define azimuth (116.56505117707799)
+		#define azimuth (296.565051177)// (116.56505117707799)
 		#define Dist (sqrtf((RowN*RowN + ColN*ColN)*DistHV*DistHV))
 		
 		nrow = row + RowN;
 		ncol = col + ColN;
 		ncell = ncol + nrow*Cols;
-		ignNcell = ignMap[ncell];
-
-		if(nrow >= 0 && nrow < Rows && ncol >= 0 && ncol < Cols &&
-		   ignNcell > timeNow && spreadMaxMap[cell] >= Smidgen)
+		
+		if(nrow >= 0 && nrow < Rows && ncol >= 0 && ncol < Cols)
+		
 		{
 			//"SpreadAtAzimuth"
-			if (phiEffWindMap[cell] < Smidgen && azimuthMaxMap[cell] == azimuth)
-				spreadAny_sh[thx][thy] = spreadMaxMap[cell];
+			if (phiEffWindMap[ncell] < Smidgen && azimuthMaxMap[ncell] == azimuth)
+				spreadAny_sh[thx][thy] = spreadMaxMap[ncell];
 			else
 			{
-				if ((dir_sh[thx][thy] = fabsf(azimuthMaxMap[cell] - azimuth)) > 180)
+				if ((dir_sh[thx][thy] = fabsf(azimuthMaxMap[ncell] - azimuth)) > 180)
 					dir_sh[thx][thy] = 360. - dir_sh[thx][thy];
 			
 				dir_sh[thx][thy] = DegToRad(dir_sh[thx][thy]);
 
-				eccentricity = eccentricityMap[cell];
-				spreadAny_sh[thx][thy] = spreadMaxMap[cell]*(1-eccentricity)/
+				eccentricity = eccentricityMap[ncell];
+				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
 				if (spreadAny_sh[thx][thy] > INF)
-					spreadAny_sh[thx][thy] = spread0Map[cell];
+					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
-			ignTime_sh[thx][thy] = timeNow + Dist / spreadAny_sh[thx][thy];
+			ignTime_sh[thx][thy] = ignMap[ncell] + Dist/ spreadAny_sh[thx][thy];
 
-			if(ignTime_sh[thx][thy] < ignNcell)
-			{
-				looping = true;
-				while(looping)
-				{
-					if (atomicExch(&(lockMap[ncell]), 1u) == 0u)
-					{
-						looping = false;
-						if(ignTime_sh[thx][thy] < ignMap[ncell])
-						{
-							ignMap[ncell] = ignTime_sh[thx][thy];
-						}	
-						atomicExch(&(lockMap[ncell]), 0u);
-					}
-				}
-			}
-			//Update timeNext
-			if( ignTime_sh[thx][thy] < *timeNext )
-			{	
-				looping = true;
-				while(looping)
-				{
-					if (atomicExch(lockTime, 1u) == 0u)
-					{
-						looping = false;
-						if(ignTime_sh[thx][thy] < *timeNext)
-						{
-							*timeNext = ignTime_sh[thx][thy];
-						}
-						atomicExch(lockTime, 0u);
-					}
-				}
-			}	
+			
+			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min)
+										+ ignTime_min *      ( ignTime_sh[thx][thy] >= ignTime_min);
 		}
 		#undef RowN
 		#undef ColN
@@ -825,70 +644,40 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 		//g Neighbor 
 		#define RowN    (2)
 		#define ColN    (-1)
-		#define azimuth (206.56505117707798)
+		#define azimuth (26.565051177)//(206.56505117707798)
 		#define Dist (sqrtf((RowN*RowN + ColN*ColN)*DistHV*DistHV))
 		
 		nrow = row + RowN;
 		ncol = col + ColN;
 		ncell = ncol + nrow*Cols;
-		ignNcell = ignMap[ncell];
 
-		if(nrow >= 0 && nrow < Rows && ncol >= 0 && ncol < Cols &&
-		   ignNcell > timeNow && spreadMaxMap[cell] >= Smidgen)
+
+		if(nrow >= 0 && nrow < Rows && ncol >= 0 && ncol < Cols)
+		
 		{
 			//"SpreadAtAzimuth"
-			if (phiEffWindMap[cell] < Smidgen && azimuthMaxMap[cell] == azimuth)
-				spreadAny_sh[thx][thy] = spreadMaxMap[cell];
+			if (phiEffWindMap[ncell] < Smidgen && azimuthMaxMap[ncell] == azimuth)
+				spreadAny_sh[thx][thy] = spreadMaxMap[ncell];
 			else
 			{
-				if ((dir_sh[thx][thy] = fabsf(azimuthMaxMap[cell] - azimuth)) > 180)
+				if ((dir_sh[thx][thy] = fabsf(azimuthMaxMap[ncell] - azimuth)) > 180)
 					dir_sh[thx][thy] = 360. - dir_sh[thx][thy];
 			
 				dir_sh[thx][thy] = DegToRad(dir_sh[thx][thy]);
 
-				eccentricity = eccentricityMap[cell];
-				spreadAny_sh[thx][thy] = spreadMaxMap[cell]*(1-eccentricity)/
+				eccentricity = eccentricityMap[ncell];
+				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
 				if (spreadAny_sh[thx][thy] > INF)
-					spreadAny_sh[thx][thy] = spread0Map[cell];
+					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
-			ignTime_sh[thx][thy] = timeNow + Dist / spreadAny_sh[thx][thy];
+			ignTime_sh[thx][thy] = ignMap[ncell] + Dist/ spreadAny_sh[thx][thy];
 
-			if(ignTime_sh[thx][thy] < ignNcell)
-			{
-				looping = true;
-				while(looping)
-				{
-					if (atomicExch(&(lockMap[ncell]), 1u) == 0u)
-					{
-						looping = false;
-						if(ignTime_sh[thx][thy] < ignMap[ncell])
-						{
-							ignMap[ncell] = ignTime_sh[thx][thy];
-						}	
-						atomicExch(&(lockMap[ncell]), 0u);
-					}
-				}
-			}
-			//Update timeNext
-			if( ignTime_sh[thx][thy] < *timeNext )
-			{	
-				looping = true;
-				while(looping)
-				{
-					if (atomicExch(lockTime, 1u) == 0u)
-					{
-						looping = false;
-						if(ignTime_sh[thx][thy] < *timeNext)
-						{
-							*timeNext = ignTime_sh[thx][thy];
-						}
-						atomicExch(lockTime, 0u);
-					}
-				}
-			}	
+			
+			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min)
+										+ ignTime_min *      ( ignTime_sh[thx][thy] >= ignTime_min);
 		}
 		#undef RowN
 		#undef ColN
@@ -899,70 +688,40 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 		//h Neighbor 
 		#define RowN    (2)
 		#define ColN    (1)
-		#define azimuth (153.43494882292202)
+		#define azimuth  (333.434948823) //(153.43494882292202)
 		#define Dist (sqrtf((RowN*RowN + ColN*ColN)*DistHV*DistHV))
 		
 		nrow = row + RowN;
 		ncol = col + ColN;
 		ncell = ncol + nrow*Cols;
-		ignNcell = ignMap[ncell];
 
-		if(nrow >= 0 && nrow < Rows && ncol >= 0 && ncol < Cols &&
-		   ignNcell > timeNow && spreadMaxMap[cell] >= Smidgen)
+		
+		if(nrow >= 0 && nrow < Rows && ncol >= 0 && ncol < Cols)
+		
 		{
 			//"SpreadAtAzimuth"
-			if (phiEffWindMap[cell] < Smidgen && azimuthMaxMap[cell] == azimuth)
-				spreadAny_sh[thx][thy] = spreadMaxMap[cell];
+			if (phiEffWindMap[ncell] < Smidgen && azimuthMaxMap[ncell] == azimuth)
+				spreadAny_sh[thx][thy] = spreadMaxMap[ncell];
 			else
 			{
-				if ((dir_sh[thx][thy] = fabsf(azimuthMaxMap[cell] - azimuth)) > 180)
+				if ((dir_sh[thx][thy] = fabsf(azimuthMaxMap[ncell] - azimuth)) > 180)
 					dir_sh[thx][thy] = 360. - dir_sh[thx][thy];
 			
 				dir_sh[thx][thy] = DegToRad(dir_sh[thx][thy]);
 
-				eccentricity = eccentricityMap[cell];
-				spreadAny_sh[thx][thy] = spreadMaxMap[cell]*(1-eccentricity)/
+				eccentricity = eccentricityMap[ncell];
+				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
 				if (spreadAny_sh[thx][thy] > INF)
-					spreadAny_sh[thx][thy] = spread0Map[cell];
+					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
-			ignTime_sh[thx][thy] = timeNow + Dist / spreadAny_sh[thx][thy];
+			ignTime_sh[thx][thy] = ignMap[ncell] + Dist/ spreadAny_sh[thx][thy];
 
-			if(ignTime_sh[thx][thy] < ignNcell)
-			{
-				looping = true;
-				while(looping)
-				{
-					if (atomicExch(&(lockMap[ncell]), 1u) == 0u)
-					{
-						looping = false;
-						if(ignTime_sh[thx][thy] < ignMap[ncell])
-						{
-							ignMap[ncell] = ignTime_sh[thx][thy];
-						}	
-						atomicExch(&(lockMap[ncell]), 0u);
-					}
-				}
-			}
-			//Update timeNext
-			if( ignTime_sh[thx][thy] < *timeNext )
-			{	
-				looping = true;
-				while(looping)
-				{
-					if (atomicExch(lockTime, 1u) == 0u)
-					{
-						looping = false;
-						if(ignTime_sh[thx][thy] < *timeNext)
-						{
-							*timeNext = ignTime_sh[thx][thy];
-						}
-						atomicExch(lockTime, 0u);
-					}
-				}
-			}	
+			
+			ignTime_min = ignTime_sh[thx][thy]*( ignTime_sh[thx][thy] < ignTime_min)
+										+ ignTime_min *      ( ignTime_sh[thx][thy] >= ignTime_min);
 		}
 		#undef RowN
 		#undef ColN
@@ -970,7 +729,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 		#undef Dist
 
 		#endif //For Stencil 16
-*/	
+	
 	}	
 
 	ignMap_new[cell] = ignTime_min;

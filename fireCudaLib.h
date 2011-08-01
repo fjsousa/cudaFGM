@@ -77,12 +77,12 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#define TAG "CUDA8_"
-#define Stencil16 0
+#define TAG "CUDA16_"
+#define Stencil16 1
 #define Clatering  1
 
 #define INF 			9999999. /* or close enough */
-#define BLOCK_SIZE 8
+#define BLOCK_SIZE 4
 
 #define sizeModel (9)
 #define sizePart  (2)
