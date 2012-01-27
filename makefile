@@ -1,36 +1,40 @@
-# makefile for fireSim, a sample fire behavior simulator using fireLib
-# Collin D. Bevins, October 1996
-
-
-#ifdef $(DEVEMULATION)
-# DEV_EMULATION=-deveemu
-#endif
-
 # The following rules work for UnixWare 2.0.
-#CC = gcc
+CC = gcc
 NVCC = nvcc
-CUDAFLAGS = -O3#-arch=sm_13 
+
+ifdef DEBUG
+FLAGS = -g
+CUDAFLAGS = -g
+endif
+
+ifdef OPTIMIZED
+FLAGS = -O3
+CUDAFLAGS = -O3
+endif
 
 LIBS = -lm
 CUDALIBS = -lcudart -lm -lcublas 
+
+%.o : %.c
+	$(CC) $(FLAGS) -c $< 
 
 %.o : %.cu
 	$(NVCC) $(CUDAFLAGS)  -c $< 
 
 
-OBJ =	fireCudaLib.o\
-			fireWrapper.o\
-			FK_NoWindNoSlope.o\
-			FK_SpreadAtNeighbors.o\
-			FK_WindAndSlope.o\
-			NoWindNoSlope.o\
-			WindAndSlope.o\
-			errorStuff.o\
-			createMaps.o
+OBJ =	fireLib_float.o\
+			main.o\
+			FK_SpreadAtNeighbors.o
 
 
-fireCuda: $(OBJ)
+cudaFGM: $(OBJ)
 	$(NVCC) -o  $@ $(OBJ) $(CUDALIBS) 
+
+createMaps: createMaps.o 
+	$(CC) -o $@ createMaps.o $(LIBS) 
+
+createTestMaps: createTestMaps.o 
+	$(CC) -o $@ createTestMaps.o $(LIBS) 
 
 clean:
 	@rm -f *.o *.linkinfo *.sw*
@@ -38,10 +42,7 @@ clean:
 cleanDebug:
 	@rm -f *.cubin* *.ptx *.gpu* *.cpp* *cudafe* *hash*
 
-distclean: clean
-	rm fireSim
-
-cleandist: distclean
-
+FGM_distclean:
+	rm cudaFGM  
 
 # End of makefile

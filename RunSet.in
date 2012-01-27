@@ -1,0 +1,39 @@
+RunSet.in
+
+Inputs must bre provided in the following format:
+
+Map width (meters)
+Map height
+Number of rows (Multiple of BLOCKSIZE)
+Number of cols	(Multiple of BLOCKSIZE)
+Fuel Model (NFFL models) or 14-custom	
+Wind speed (mph)
+Wind Direction (from north)
+Moisture: M1 
+					M10 
+ 				 	M100 
+ 				 	Mherb 
+ 				 	Mwood
+Custom Particle load (Not relevant if using one of theNFFL 13) 
+ignition point (X) as a %(0-1) of map width
+ignition point (Y) as a %(0-1) of map height
+GPU device
+ignition map file name (no spaces)
+______________________________________________________________________
+7000.0
+7000.0
+128
+128
+6
+5
+45
+0.05
+0
+0
+0
+0
+0.034
+0.25
+0.75
+0
+ignMap_teste.map 

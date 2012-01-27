@@ -3,10 +3,13 @@
 //
 //Kernel and other functions called from the kernel
 ////////////////////////////////////////////////////////////////////////////////
-#include "fireCudaLib.h"
+#include "header.h"
 
 #define Cols (gridDim.x*blockDim.x)
 #define Rows (gridDim.y*blockDim.y)
+
+#define thx (threadIdx.x)
+#define thy (threadIdx.y)
 
 #define DistD (1.414213562*DistHV)
 ///////////////////////////////////////////////////////////////////////////////
@@ -45,7 +48,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 	ignCell = ignMap[cell];
 	if (ignCell > 0)
 	{	
-		ignTime_min = INF;
+		ignTime_min = INFINITY;
 
 		///////////////////////////////////////////////////////////////////////////
 		//North Neighbor 
@@ -53,7 +56,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 		#define ColN    (0)
 		#define azimuth (180)
 
-		nrow = row + RowN;
+		nrow = row +  RowN;
 		ncol = col + ColN;
 		ncell = ncol + nrow*Cols;
 
@@ -74,7 +77,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
-				if (spreadAny_sh[thx][thy] > INF)
+				if (spreadAny_sh[thx][thy] > INFINITY)
 					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
@@ -116,7 +119,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
-				if (spreadAny_sh[thx][thy] > INF)
+				if (spreadAny_sh[thx][thy] > INFINITY)
 					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
@@ -157,7 +160,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
-				if (spreadAny_sh[thx][thy] > INF)
+				if (spreadAny_sh[thx][thy] > INFINITY)
 					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
@@ -198,7 +201,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
-				if (spreadAny_sh[thx][thy] > INF)
+				if (spreadAny_sh[thx][thy] > INFINITY)
 					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
@@ -239,7 +242,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
-				if (spreadAny_sh[thx][thy] > INF)
+				if (spreadAny_sh[thx][thy] > INFINITY)
 					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
@@ -281,7 +284,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
-				if (spreadAny_sh[thx][thy] > INF)
+				if (spreadAny_sh[thx][thy] > INFINITY)
 					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
@@ -322,7 +325,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
-				if (spreadAny_sh[thx][thy] > INF)
+				if (spreadAny_sh[thx][thy] > INFINITY)
 					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
@@ -363,7 +366,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
-				if (spreadAny_sh[thx][thy] > INF)
+				if (spreadAny_sh[thx][thy] > INFINITY)
 					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
@@ -377,7 +380,6 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 		#undef ColN
 		#undef azimuth
 	
-		#if Stencil16
 		///////////////////////////////////////////////////////////////////////////
 		//a Neighbor 
 		#define RowN    (-2)
@@ -406,7 +408,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
-				if (spreadAny_sh[thx][thy] > INF)
+				if (spreadAny_sh[thx][thy] > INFINITY)
 					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
@@ -450,7 +452,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
-				if (spreadAny_sh[thx][thy] > INF)
+				if (spreadAny_sh[thx][thy] > INFINITY)
 					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
@@ -494,7 +496,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
-				if (spreadAny_sh[thx][thy] > INF)
+				if (spreadAny_sh[thx][thy] > INFINITY)
 					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
@@ -537,7 +539,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
-				if (spreadAny_sh[thx][thy] > INF)
+				if (spreadAny_sh[thx][thy] > INFINITY)
 					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
@@ -581,7 +583,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
-				if (spreadAny_sh[thx][thy] > INF)
+				if (spreadAny_sh[thx][thy] > INFINITY)
 					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
@@ -625,7 +627,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
-				if (spreadAny_sh[thx][thy] > INF)
+				if (spreadAny_sh[thx][thy] > INFINITY)
 					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
@@ -669,7 +671,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
-				if (spreadAny_sh[thx][thy] > INF)
+				if (spreadAny_sh[thx][thy] > INFINITY)
 					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
@@ -713,7 +715,7 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 				spreadAny_sh[thx][thy] = spreadMaxMap[ncell]*(1-eccentricity)/
 																	(1- eccentricity*__cosf(dir_sh[thx][thy]));
 
-				if (spreadAny_sh[thx][thy] > INF)
+				if (spreadAny_sh[thx][thy] > INFINITY)
 					spreadAny_sh[thx][thy] = spread0Map[ncell];
 			}//"SpreadAtAzimuth"
 
@@ -728,7 +730,6 @@ __global__ void FireKernel_SpreadAtNeighbors( float* ignMap,
 		#undef azimuth
 		#undef Dist
 
-		#endif //For Stencil 16
 	
 	}	
 
