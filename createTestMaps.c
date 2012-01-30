@@ -28,7 +28,7 @@ int main (void)
 	//Reads setup data 
 	IN = fopen("RunSet.in","r");
 	//skips 22 text lines of RunSet.in
-	for (n = 0; n < 25; n++)
+	for (n = 0; n < 26; n++)
 		fgets(buffer, 100, IN);
 		//Reads setup data
 	fscanf(IN, "%d %d", &N, &M);

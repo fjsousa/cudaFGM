@@ -27,6 +27,7 @@
 //																GPU device
 //                                ignition map file name (no spaces)
 //																Verbosity (1 - more 0 - less)
+//                                init ignMap to BEHAVE elipse for faster solution (1 - Yes, 0 - No)
 
 #include "fireLib_float.h"
 #include "header.h"
@@ -38,6 +39,8 @@
 //Function headers
 //
 int PrintMap ( float*, char* );
+//
+float* BEHAVEelipse( float, int, int, float, float, float);
 //
 int Print_CatalogStruct(FuelCatalogPtr);
 //
@@ -58,8 +61,8 @@ int FGM_cycle( 	float*,	float*,
 
 //////////////////
 //Global variables
-int    Rows;
-int    Cols;
+int    Rows;                    //Map dimensions are global variables
+int    Cols;										//
 float mapW_m, mapH_m;						//map width height (meters) 
 float mapW, mapH;    						//map width height (feet)
 
@@ -93,9 +96,10 @@ int main ( int argc, char **argv )
   //
 	float particle_load;				//*CUSTOM FUEL MODEL* - particle load
 	//
-	size_t *fuelMap;            /* ptr to fuel model map */
+	float *initialMap;         //BEHAVE eliptical ignition map 
+	size_t *fuelMap;           /* ptr to fuel model map */
   float *ignMap;             /* ptr to ignition time map (minutes) */
-  float  *ignMap_new;       	/* ptr to ignition time map (minutes) */
+  float  *ignMap_new;        /* ptr to ignition time map (minutes) */
   float *slpMap;             /* ptr to slope map (rise/reach) */
   float *aspMap;             /* ptr to aspect map (degrees from north) */
   float *wspdMap;            /* ptr to wind speed map (ft/min) */
@@ -125,6 +129,7 @@ int main ( int argc, char **argv )
 	char ignFileName[40];
 	int n;
 	int verbosity;              //level of verbosity of shell output
+	int init_elipse;						//init ignMap to BEHAVE elipse for faster solution
 	//
 	clock_t start, end;
 	double time;
@@ -133,11 +138,11 @@ int main ( int argc, char **argv )
 	//Read RunSet.in
 	IN = fopen("RunSet.in", "r");
 	//skips 22 text lines of RunSet.in
-	for (n = 0; n < 23; n++)
+	for (n = 0; n < 24; n++)
 		fgets(buffer, 100, IN);
-	fscanf(IN, "%f %f %d %d %d %f %f %f %f %f %f %f %f %f %f %d %s %d",  
+	fscanf(IN, "%f %f %d %d %d %f %f %f %f %f %f %f %f %f %f %d %s %d %d",  
 	  	&mapW_m, &mapH_m, &Rows, &Cols, &Model, &WindSpd, &WindDir, 
-			&M1, &M10, &M100, &Mherb, &Mwood, &particle_load, &ignX, &ignY, &device, &ignFileName, &verbosity);
+			&M1, &M10, &M100, &Mherb, &Mwood, &particle_load, &ignX, &ignY, &device, &ignFileName, &verbosity, &init_elipse);
 	//Input Checks
 	if (  ignX > 1 || ignX < 0 || ignY > 1 || ignY < 0 )
 	{
@@ -238,13 +243,13 @@ int main ( int argc, char **argv )
       m100Map[cell]    = M100;
       mherbMap[cell]   = Mherb;
       mwoodMap[cell]   = Mwood;
-      ignMap[cell]   	 = 500;								//ignition maps init to 500 min
-      ignMap_new[cell] = 500;
+			ignMap[cell] 		 = 500;
+  		ignMap_new[cell] = 500;
   	}
 	}
 	//ignition point - ignX and ignY is a percentage of the map height and width
 	cell = Cols*ignX + Cols*Rows*ignY;
-	ignMap[cell] = 0.0;
+	ignMap[cell] 		 = 0;
   ignMap_new[cell] = 0;
 	
 
@@ -302,8 +307,9 @@ int main ( int argc, char **argv )
 	//Print catalog structure
 	if (verbosity == 1) Print_CatalogStruct(catalog);
 
-	//////////////////////////////////
-	//Create sprea0 and spreadMax maps 
+	//////////////////////////////////////////////////////////////
+	//Preprocessing stage:Create sprea0 and spreadMax maps
+	//Initialize ignMap and ignMap_new to BEHAVE eliptical ign map
 	printf("\n>>Running preprocessor...");
 	start = clock();
 	for (cell = 0; cell < Cells; cell++)
@@ -325,13 +331,20 @@ int main ( int argc, char **argv )
 		eccentricityMap[cell] = Fuel_Eccentricity(catalog,Model);
 		phiEffWindMap[cell]  	= Fuel_PhiEffWind(catalog,Model);
 	}
+	//Initialize BEHAVE Elipse and update ignMap and ignMap_new 
+	if (init_elipse == 1)
+	{
+		cell = Cols*ignX + Cols*Rows*ignY; //elipse is created with ignition point values 
+		initialMap = BEHAVEelipse( CellWd, Rows*ignY, Cols*ignX, spreadMaxMap[cell], eccentricityMap[cell], azimuthMaxMap[cell]);
+		for (cell = 0; cell < Cells; cell++)
+			ignMap[cell] = ignMap_new[cell] = initialMap[cell];
+	}
 	end = clock();
 	time = ((double) (end - start))/CLOCKS_PER_SEC;
 	printf("Done with %lf seconds.\n",time);
-	
+
 	///////////////////////////////////
 	//Fire growth model iterative cycle
-	
 	printf("\n>>Running FGM cycle...");
 	start = clock();
 	if ( FGM_cycle( ignMap, 				 ignMap_d,
@@ -391,6 +404,91 @@ int main ( int argc, char **argv )
 ////////////////
 //More Functions
 ////////////////
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Exact Solution Scenario 1
+//
+// Spread rate in a given direction is function of de ROS of the Wind and Slope 
+// case , times a coefficient, function of the angle between the maximum spread
+// rate (direction of the wind, etc) and the direction of the actual propagation
+//
+//R = RMax * F (azimuth, azimuthMax)
+///////////////////////////////////////////////////////////////////////////////
+float* BEHAVEelipse( float CellWd, int ignRow, int ignCol, float Rmax, 
+																									float Ecc, float azimuth_max)
+{
+	float* elipseMap;
+	int row, col;
+	float Dist, DistH, DistW;
+	float azimuth; 							//cell direction to north
+	float dir; 									//angle between azimuth max and azimuth
+	float F; 										//Factor to be apllied to Rmax
+	float ignTime = 0;
+	float CellHt  = CellWd;     //CellHt is equal to cell width
+															//Code dos not handle yet rectangular domains
+
+	elipseMap = (float*)malloc(Rows*Cols*sizeof(float));
+
+	for (row = 0 ; row < Rows; row++)
+	{
+		for (col = 0; col < Cols; col++)
+		{
+			
+			DistW = (col - ignCol) * CellWd;
+			DistH = (row - ignRow) * CellHt;
+
+			//Special Cases
+			if ((col - ignCol) == 0 && (row - ignRow) < 0)
+				azimuth = 0.;
+			else if ((col - ignCol) > 0 && (row - ignRow) == 0)
+				azimuth = 90.;
+			else if ((col - ignCol) == 0 && (row - ignRow) > 0)
+				azimuth = 180.;
+			else if ((col - ignCol) < 0 && (row - ignRow) == 0)
+				azimuth = 270.;
+
+			//1st Quadrant
+			else if ( (col - ignCol) > 0 && (row - ignRow) < 0  )
+			{	
+				azimuth = fabs( atanf( DistW / DistH ) );
+				azimuth = RadToDeg(azimuth);
+			}
+			//2nd Quadrant
+			else if ( (col - ignCol) > 0 && (row - ignRow) > 0 )
+			{	
+				azimuth = atanf( DistH / DistW );
+				azimuth = RadToDeg(azimuth) + 90.;
+			}
+			//3rd Quadrant
+			else if ( (col - ignCol) < 0 && (row - ignRow) > 0 )
+			{	
+				azimuth = fabs(atanf( DistW / DistH ));
+				azimuth = RadToDeg(azimuth) + 180.;
+			}
+			//4th Quadrant
+			else if ( (col - ignCol) < 0 && (row - ignRow) < 0 )
+			{	
+				azimuth = atanf( DistH / DistW );
+				azimuth = RadToDeg(azimuth) + 270.;
+			}
+
+			if ((dir = fabs( azimuth_max - azimuth )) > 180. )
+				dir = 360. - dir; // minimum distance between lines
+
+			dir = DegToRad(dir);
+		
+			F = (1- Ecc) / (1 - Ecc*cosf(dir));
+
+			Dist = sqrt( DistH*DistH + DistW*DistW);
+
+			elipseMap[col + Cols*row] = ignTime + Dist / Rmax/F;
+		}
+	}
+	
+	return(elipseMap);
+}
+
 
 ////////////
 //Print Maps
