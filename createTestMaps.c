@@ -28,7 +28,7 @@ int main (void)
 	//Reads setup data 
 	IN = fopen("RunSet.in","r");
 	//skips 22 text lines of RunSet.in
-	for (n = 0; n < 24; n++)
+	for (n = 0; n < 25; n++)
 		fgets(buffer, 100, IN);
 		//Reads setup data
 	fscanf(IN, "%d %d", &N, &M);
@@ -44,7 +44,7 @@ int main (void)
 	{
 		for (col = 0; col < M; col++)
 		{	
-			fprintf(aspect, " %4.1f ", 1.0);
+			fprintf(aspect, " %4.1f ", 0.0);
 			fprintf(slope, " %4.1f ", 0);
 		}
 		fprintf(aspect,"\n");

@@ -4,7 +4,13 @@ NVCC = nvcc
 
 ifdef DEBUG
 FLAGS = -g
-CUDAFLAGS = -g
+CUDAFLAGS = -g 
+endif
+
+ifdef PROFILING
+FLAGS = -g
+CUDAFLAGS = -g 
+P_FLAG = -pg
 endif
 
 ifdef OPTIMIZED
@@ -16,25 +22,25 @@ LIBS = -lm
 CUDALIBS = -lcudart -lm -lcublas 
 
 %.o : %.c
-	$(CC) $(FLAGS) -c $< 
+	$(CC) $(FLAGS) -c $< $(P_FLAG)
 
 %.o : %.cu
-	$(NVCC) $(CUDAFLAGS)  -c $< 
+	$(NVCC) $(CUDAFLAGS)  -c $< $(P_FLAG)  
 
 
 OBJ =	fireLib_float.o\
 			main.o\
-			FK_SpreadAtNeighbors.o
+			fireCudaKernel.o
 
 
 cudaFGM: $(OBJ)
-	$(NVCC) -o  $@ $(OBJ) $(CUDALIBS) 
+	$(NVCC) -o  $@ $(OBJ) $(CUDALIBS) $(P_FLAG)  
 
 createMaps: createMaps.o 
-	$(CC) -o $@ createMaps.o $(LIBS) 
+	$(CC) -o $@ createMaps.o $(LIBS) $(P_FLAG)  
 
 createTestMaps: createTestMaps.o 
-	$(CC) -o $@ createTestMaps.o $(LIBS) 
+	$(CC) -o $@ createTestMaps.o $(LIBS) $(P_FLAG)  
 
 clean:
 	@rm -f *.o *.linkinfo *.sw*

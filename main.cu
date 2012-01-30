@@ -26,25 +26,35 @@
 //																ignition point (Y) as a %(0-1) of map height
 //																GPU device
 //                                ignition map file name (no spaces)
+//																Verbosity (1 - more 0 - less)
+
 #include "fireLib_float.h"
 #include "header.h"
 #include <cublas.h>
+#include <time.h>
 
 
 //////////////////
 //Function headers
+//
 int PrintMap ( float*, char* );
+//
 int Print_CatalogStruct(FuelCatalogPtr);
-void checkCUDAError(const char*);
-__global__ void FireKernel_SpreadAtNeighbors( float*, 
-											  											float*,
-											  											float*,
-											  											float*,
-											  											float*,
-											  											float*,
-											  											float*,
-											  											float,
-																							float*);
+//
+int FGM_cycle( 	float*,	float*,
+								float*,	float*,
+								float*,	float*,
+								float*,	float*,
+								float*,	float*,
+								float*, float*,
+								float*,	float*,
+								float*,
+								float,
+								dim3,
+								dim3,
+								float,
+								float,
+								int);
 
 //////////////////
 //Global variables
@@ -69,15 +79,14 @@ int main ( int argc, char **argv )
 	
 	unsigned int device;        //Assigned GPU device 
 	//
-	int n_itt = 0; 							// counter for number of time steps
 	float Residue = INFINITY;		//Residue value
-	float Residue_max;					//Maximum residue			
+	float Residue_max = Smidgen;//Maximum residue			
   //
   int    row, col, cell;      /* row, col, and index of current cell */
   int    Cells;            		/* total number of map cells */
 	float  ignX, ignY;					// ignition points
 	float CellWd;
-	float CellHt;
+	//float CellHt;							//!Not used yet!
 	//
 	FuelCatalogPtr catalog;     /* fuel catalog handle */
  	float moisture[6];         /* fuel moisture content at current cell */
@@ -115,16 +124,20 @@ int main ( int argc, char **argv )
 	char buffer[100];     			//buffer to use when fgets skips lines
 	char ignFileName[40];
 	int n;
+	int verbosity;              //level of verbosity of shell output
+	//
+	clock_t start, end;
+	double time;
 	
 	////////////////
 	//Read RunSet.in
 	IN = fopen("RunSet.in", "r");
 	//skips 22 text lines of RunSet.in
-	for (n = 0; n < 22; n++)
+	for (n = 0; n < 23; n++)
 		fgets(buffer, 100, IN);
-	fscanf(IN, "%f %f %d %d %d %f %f %f %f %f %f %f %f %f %f %d %s",  
+	fscanf(IN, "%f %f %d %d %d %f %f %f %f %f %f %f %f %f %f %d %s %d",  
 	  	&mapW_m, &mapH_m, &Rows, &Cols, &Model, &WindSpd, &WindDir, 
-			&M1, &M10, &M100, &Mherb, &Mwood, &particle_load, &ignX, &ignY, &device, &ignFileName);
+			&M1, &M10, &M100, &Mherb, &Mwood, &particle_load, &ignX, &ignY, &device, &ignFileName, &verbosity);
 	//Input Checks
 	if (  ignX > 1 || ignX < 0 || ignY > 1 || ignY < 0 )
 	{
@@ -136,14 +149,14 @@ int main ( int argc, char **argv )
 		printf("\nERROR: Runset.in - Rows must be equal to Cols!\n");
 		return (0);
 	}
-	if (  mapW != mapH )
+	if (  mapW_m != mapH_m )
 	{
 		printf("\nERROR: Runset.in - Width must be equal to height!\n");
 		return (0);
 	}
-	if (  Cols%BLOCK_SIZE !=  Rows%BLOCK_SIZE != 0)
+	if (  Cols%BLOCK_SIZE != 0 ||  Rows%BLOCK_SIZE != 0)
 	{
-		printf("\nERROR: Cols and Rows must be multiples of BLOCK_SIZE! (cuda related restriction)!\n");
+		printf("\nERROR: Cols and Rows must be multiples of BLOCK_SIZE! (cuda related restriction)\n");
 		return (0);
 	}
 
@@ -155,13 +168,14 @@ int main ( int argc, char **argv )
 
 	//////////////
 	//clublas init
+	printf("\n>>Initializing CUBLAS...");
 	if( cublasInit() != CUBLAS_STATUS_SUCCESS)
 	{
 		printf("\nERROR: CUBLAS initialization!\n");
 		return (1);
 	}
 	else
-		printf("\n>>CUBLAS initialized\n");
+		printf("Done.\n");
 	
 	///////////////////////
   //Allocate all the maps
@@ -203,7 +217,7 @@ int main ( int argc, char **argv )
 	mapW = MetersToFeet(mapW_m);
 	mapH = MetersToFeet(mapH_m);
 	CellWd = mapW/(Cols -1);				  				  	
-	CellHt = mapH/(Rows -1);					    				
+	//CellHt = mapH/(Rows -1);					    				
 	//slope and aspect file read
 	slope_file = fopen("slope.map","r");
 	aspect_file = fopen("aspect.map","r");
@@ -239,8 +253,9 @@ int main ( int argc, char **argv )
   
 	//Create 13 + 0 (no fuel model) standard NFFL models and creates space for 
 	//aditional custom model
+	printf ("\n>>Creating standard fire models...");
 	catalog = Fire_FuelCatalogCreateStandard("Standard", 14);
-	printf ("\n>>Standard Fire models Created.\n");
+	printf ("Done.\n");
 	//Create aditional custom model based on NFFL1
 	//Only the PARTICLE LOAD is customized at the moment
 	if ( Fire_FuelModelCreate (
@@ -258,7 +273,9 @@ int main ( int argc, char **argv )
   	return (NULL);
 	}
 	//Add a particle to the custom model nº 14
-  if ( Fire_FuelParticleAdd (
+	printf ("\n>>Creating custom fire model...");
+  start = clock();
+	if ( Fire_FuelParticleAdd (
   	catalog,     									// FuelCatalogData instance pointer
     14,              							//Custom fuel model id
     Fuel_Type(catalog,1,0),   
@@ -275,14 +292,20 @@ int main ( int argc, char **argv )
     return (NULL);
   }
 	else
-		printf ("\n>>Custom fire model created.\n");
+	{
+		end = clock();
+		time = ((double) (end - start))/CLOCKS_PER_SEC;
+		printf("Done with %lf seconds.\n",time);
+	}
 	
 	/////////////////////////
 	//Print catalog structure
-	Print_CatalogStruct(catalog);
+	if (verbosity == 1) Print_CatalogStruct(catalog);
 
 	//////////////////////////////////
 	//Create sprea0 and spreadMax maps 
+	printf("\n>>Running preprocessor...");
+	start = clock();
 	for (cell = 0; cell < Cells; cell++)
 	{
   	Model = fuelMap[cell];
@@ -302,45 +325,39 @@ int main ( int argc, char **argv )
 		eccentricityMap[cell] = Fuel_Eccentricity(catalog,Model);
 		phiEffWindMap[cell]  	= Fuel_PhiEffWind(catalog,Model);
 	}
+	end = clock();
+	time = ((double) (end - start))/CLOCKS_PER_SEC;
+	printf("Done with %lf seconds.\n",time);
 	
 	///////////////////////////////////
 	//Fire growth model iterative cycle
-	cudaMemcpy( ignMap_d, ignMap, Cells*sizeof(float),cudaMemcpyHostToDevice);
-	cudaMemcpy( ignMap_new_d, ignMap_new, Cells*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy( spread0Map_d, spread0Map, Cells*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy( spreadMaxMap_d, spreadMaxMap, Cells*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy( phiEffWindMap_d, phiEffWindMap, Cells*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy( eccentricityMap_d, eccentricityMap, Cells*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy( azimuthMaxMap_d, azimuthMaxMap, Cells*sizeof(float), cudaMemcpyHostToDevice);
 	
-	printf("\n>>Beginnig FGM cycle\n");
-	
-	while ( Residue > Residue_max)
+	printf("\n>>Running FGM cycle...");
+	start = clock();
+	if ( FGM_cycle( ignMap, 				 ignMap_d,
+								  ignMap_new, 		 ignMap_new_d,
+								  spread0Map, 		 spread0Map_d,
+								  spreadMaxMap, 	 spreadMaxMap_d,
+								  phiEffWindMap, 	 phiEffWindMap_d,
+								  eccentricityMap, eccentricityMap_d,
+								  azimuthMaxMap, 	 azimuthMaxMap_d,
+								 	diff_d,
+								  CellWd,
+								 	dimGrid,
+								 	dimBlock,
+								  Residue,
+								  Residue_max,
+								  Cells) !=1)
 	{
-		n_itt++;
-		
-		FireKernel_SpreadAtNeighbors<<<dimGrid, dimBlock>>>(	ignMap_d, 
-																													ignMap_new_d,
-    			  																							spread0Map_d,
-    			  																							spreadMaxMap_d,
-    			  																							azimuthMaxMap_d,
-    			  																							eccentricityMap_d,
-    			  																							phiEffWindMap_d,
-    			  																							CellWd,
-																													diff_d);
-
-
-
-		Residue = cublasSasum(Cells, diff_d, 1);
-		cublasScopy(Cells, ignMap_new_d, 1, ignMap_d, 1); 
+		printf("\nERROR: FGM cycle.\n");
 	}
-	
-	printf("\n>>Ending FGM cycle\n");
+	else
+	{
+		end = clock();
+		time = ((double) (end - start))/CLOCKS_PER_SEC;
+		printf("Done with %lf seconds.\n",time);
+	}
 
-	//////////////////
-	//Cuda Error check	
-	checkCUDAError(" FGM Kernel");	
-	
 	//////////////////////////
 	//Mem copy of ignition map
 	cudaMemcpy( ignMap,   ignMap_d,  Cells*sizeof(float), cudaMemcpyDeviceToHost);
@@ -351,18 +368,18 @@ int main ( int argc, char **argv )
 
 	//////////////
 	//Close Cublas
+	printf ("\n>>Closing CUBLAS...");
 	if(  cublasShutdown() != CUBLAS_STATUS_SUCCESS)
 	{
 		printf("\nERROR: CUBLAS Shutdown!\n");
 		return (1);
 	}
 	else
-		printf("\n>>CUBLAS Shutdown.\n");
+		printf("Done.\n");
 
 }
 /////////
 //The END
-
 
 
 
@@ -398,19 +415,6 @@ int PrintMap ( float* map, char* fileName )
     }
     fclose(fPtr);
     return (FIRE_STATUS_OK);
-}
-
-//////////////////////////
-//Cuda Error check routine
-void checkCUDAError(const char *msg)
-{
-    cudaError_t err = cudaGetLastError();
-    if( cudaSuccess != err) 
-    {
-        fprintf(stderr, "Cuda error: %s: %s.\n", msg, 
-                             cudaGetErrorString( err) );
-        //exit(EXIT_FAILURE);
-    }                         
 }
 
 /////////////////////////

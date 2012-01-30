@@ -59,8 +59,8 @@
 #ifndef FIRE_LIB_
 #define FIRE_LIB_ 1
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <assert.h>

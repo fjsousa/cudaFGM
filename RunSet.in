@@ -19,21 +19,23 @@ ignition point (X) as a %(0-1) of map width
 ignition point (Y) as a %(0-1) of map height
 GPU device
 ignition map file name (no spaces)
+Verbosity (1 - more; 0 - less)
 ______________________________________________________________________
-7000.0
-7000.0
-128
-128
-6
-5
-45
-0.05
+3000.0
+3000.0
+400
+400
+14
+2.684
+135
+0.07
 0
 0
 0
 0
-0.034
+0.23
 0.25
-0.75
+0.25
 0
-ignMap_teste.map 
+ignMap_testePaper.map 
+0
