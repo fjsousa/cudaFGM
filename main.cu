@@ -12,6 +12,9 @@
 //Main output is the ignition map "ignMap_###.dat", where ### is a user 
 //defined tag
 //
+//Grass aspect and slope files can be read with "./cudaFGM 1". Grass slope files must
+//be written in "percentage".
+//
 //Inputs provided in "RunSet.in": Map width (meters)
 //																Map height
 //																Number of rows
@@ -28,6 +31,9 @@
 //                                ignition map file name (no spaces)
 //																Verbosity (1 - more 0 - less)
 //                                init ignMap to BEHAVE elipse for faster solution (1 - Yes, 0 - No)
+//
+//Change log: 17/02/2012          cudaFGM reads Grass aspect and slope file formats.  
+//
 
 #include "fireLib_float.h"
 #include "header.h"
@@ -77,9 +83,10 @@ float Mwood;
 
 //////
 //Main
-int main ( int argc, char **argv )
+int main ( int argc, char *argv[] )
 {
-	
+	int grass = atoi(argv[1]);  //Grass files are used if grass==1
+	float slp_tmp, asp_tmp;     //slope and aspect temporary values
 	unsigned int device;        //Assigned GPU device 
 	//
 	float Residue = INFINITY;		//Residue value
@@ -226,27 +233,67 @@ int main ( int argc, char **argv )
 	//slope and aspect file read
 	slope_file = fopen("slope.map","r");
 	aspect_file = fopen("aspect.map","r");
-	//data assignment to maps
-	for ( row = 0; row < Rows; row++ )
+	//If using grass file format for aspect and slope
+	if (grass == 1)  
 	{
-  	for ( col = 0; col < Cols; col ++)
+		//fgets to skip header in aspect and slope files
+		for (n = 0; n < 6; n++)
 		{
-			cell = col + row*Cols;
+			fgets(buffer, 100, slope_file);
+			fgets(buffer, 100, aspect_file);
+		}
+		//data assignment to maps
+		for ( row = 0; row < Rows; row++ )
+		{
+ 		 	for ( col = 0; col < Cols; col ++)
+			{
+				cell = col + row*Cols;
       
-			fscanf(aspect_file, "%f", &aspMap[cell] );
-			fscanf(slope_file, "%f", &slpMap[cell] );
-			fuelMap[cell]    = Model;
-      wspdMap[cell]    = 88. * WindSpd;     /* convert mph into ft/min */
-      wdirMap[cell]    = WindDir;
-      m1Map[cell]      = M1;
-      m10Map[cell]     = M10;
-      m100Map[cell]    = M100;
-      mherbMap[cell]   = Mherb;
-      mwoodMap[cell]   = Mwood;
-			ignMap[cell] 		 = 500;
-  		ignMap_new[cell] = 500;
-  	}
+				fscanf(aspect_file, "%f", &asp_tmp);
+				fscanf(slope_file, "%f", &slp_tmp);
+				slpMap[cell]     = slp_tmp/100; 										//Slope in firelib is a fraction
+				asp_tmp = (asp_tmp - 90 < 0) ?                      //while in Grass is percentage rise/reach.
+											asp_tmp - 90 + 360	: asp_tmp - 90 ;  //Aspect in firelib is N=0 and clockwise 
+				aspMap[cell]	   = 360 - asp_tmp; 						      //while aspect in Grass is E=0 counter-clockwise
+				fuelMap[cell]    = Model;
+   		  wspdMap[cell]    = 88. * WindSpd;     							/* convert mph into ft/min */
+   	 	  wdirMap[cell]    = WindDir;
+   	 	  m1Map[cell]      = M1;
+   	 	  m10Map[cell]     = M10;
+     	  m100Map[cell]    = M100;
+   		  mherbMap[cell]   = Mherb;
+     		mwoodMap[cell]   = Mwood;
+				ignMap[cell] 		 = 500;
+  			ignMap_new[cell] = 500;
+  		}
+		}
+		PrintMap(aspMap,"aspectTest.map");
 	}
+	else 
+	{
+		//data assignment to maps
+		for ( row = 0; row < Rows; row++ )
+		{
+ 		 	for ( col = 0; col < Cols; col ++)
+			{
+				cell = col + row*Cols;
+      
+				fscanf(aspect_file, "%f", &aspMap[cell] );
+				fscanf(slope_file, "%f", &slpMap[cell] );
+				fuelMap[cell]    = Model;
+   		  wspdMap[cell]    = 88. * WindSpd;     /* convert mph into ft/min */
+   	 	  wdirMap[cell]    = WindDir;
+   	 	  m1Map[cell]      = M1;
+   	 	  m10Map[cell]     = M10;
+     	  m100Map[cell]    = M100;
+   		  mherbMap[cell]   = Mherb;
+     		mwoodMap[cell]   = Mwood;
+				ignMap[cell] 		 = 500;
+  			ignMap_new[cell] = 500;
+  		}
+		}
+	}
+
 	//ignition point - ignX and ignY is a percentage of the map height and width
 	cell = Cols*ignX + Cols*Rows*ignY;
 	ignMap[cell] 		 = 0;
