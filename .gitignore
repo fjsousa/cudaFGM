@@ -4,4 +4,5 @@
 *.out
 *.map
 *.grass
+*.log
 ./spare_pieces/*
