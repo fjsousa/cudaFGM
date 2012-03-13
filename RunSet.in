@@ -22,22 +22,22 @@ ignition map file name (no spaces)
 Verbosity (1 - more; 0 - less)
 init ignMap to BEHAVE elipse for faster solution (1 - Yes, 0 - No)
 ______________________________________________________________________
-3000.00
-3000.0
-400
-400
+6.0
+6.0
+600
+600
 14
-0.1148664073E+01
-0.9643090481E+02
-0.6051061674E-01
+0
+0
+0.095
 0
 0
 0
 0
-0.1314345345E+00
-0.25
-0.25
+0.3285654655E+00
+0 
+0 
 0
-ignMap_C_Real_002.map
-0
+ignMap_V.map
 1
+0

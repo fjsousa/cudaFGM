@@ -3,7 +3,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include <stdio.h>
 
-#define BLOCK_SIZE 16
+#define BLOCK_SIZE 8
 
 #define FeetToMeters(x) 				((x)*0.3048 )
 #define MetersToFeet(x) 				((x)*3.2808399)

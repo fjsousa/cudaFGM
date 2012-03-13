@@ -32,7 +32,8 @@
 //																Verbosity (1 - more 0 - less)
 //                                init ignMap to BEHAVE elipse for faster solution (1 - Yes, 0 - No)
 //
-//Change log: 17/02/2012          cudaFGM reads Grass aspect and slope file formats.  
+//Change log:   12/03/2012
+//							17/02/2012          cudaFGM reads Grass aspect and slope file formats.  
 //
 
 #include "fireLib_float.h"
@@ -280,24 +281,52 @@ int main ( int argc, char *argv[] )
       
 				fscanf(aspect_file, "%f", &aspMap[cell] );
 				fscanf(slope_file, "%f", &slpMap[cell] );
-				fuelMap[cell]    = Model;
    		  wspdMap[cell]    = 88. * WindSpd;     /* convert mph into ft/min */
    	 	  wdirMap[cell]    = WindDir;
    	 	  m1Map[cell]      = M1;
    	 	  m10Map[cell]     = M10;
      	  m100Map[cell]    = M100;
    		  mherbMap[cell]   = Mherb;
-     		mwoodMap[cell]   = Mwood;
-				ignMap[cell] 		 = 500;
-  			ignMap_new[cell] = 500;
-  		}
+     		mwoodMap[cell]   = Mwood;	
+				//Aqui está a definicao do caso de frente de chama em V
+				//os mapas de ignição e de fuel maps são editados de acordo com 
+				//o caso experimental do Viegas
+				
+				//valores antigos
+				//ignMap[cell] 		 = 500;
+  			//ignMap_new[cell] = 500;
+				//fuelMap[cell]    = Model;
+				
+				//parametros das rectas
+				float m_one = -tan( DegToRad(75));
+				float m_two =  tan( DegToRad(75));
+				float b_one = MetersToFeet( 0.52) - m_one*MetersToFeet(2);
+				float b_two = MetersToFeet( 0.52) - m_two*MetersToFeet(2);
+				if (( ((Rows - 1) - row) <= (m_one*col + b_one/CellWd + MetersToFeet( 0.02)/CellWd) && ((Rows - 1) - row) >= (m_one*col + b_one/CellWd - MetersToFeet( 0.02)/CellWd) ) 
+				 ||( ((Rows - 1) - row) <= (m_two*col + b_two/CellWd + MetersToFeet( 0.02)/CellWd) && ((Rows - 1) - row) >= (m_two*col + b_two/CellWd - MetersToFeet( 0.02)/CellWd) ) )
+				{
+					ignMap[cell] = 0;
+					ignMap_new[cell] = 0;
+				}
+				else
+				{
+					ignMap[cell] = 500;
+					ignMap_new[cell] = 500;
+				}
+				if ( (Rows - 1) - row >= m_one*col + b_one/CellWd && (Rows - 1) - row >= m_two*col + b_two/CellWd ) 
+					fuelMap[cell] = Model;
+				else
+					fuelMap[cell] = 0;
+			}
 		}
 	}
 
+	//PrintMap(fuelMap, "fuel.map");
+	PrintMap(ignMap, "init_ign.map");
 	//ignition point - ignX and ignY is a percentage of the map height and width
-	cell = Cols*ignX + Cols*Rows*ignY;
-	ignMap[cell] 		 = 0;
-  ignMap_new[cell] = 0;
+	//cell = Cols*ignX + Cols*Rows*ignY;
+	//ignMap[cell] 		 = 0;
+  //ignMap_new[cell] = 0;
 	
 
 	////////////////////////////////
