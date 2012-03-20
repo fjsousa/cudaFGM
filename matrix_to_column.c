@@ -7,7 +7,7 @@
 
 int main (int argc, char *argv[])
 {
-	int row, col;
+	int cell;
 	int side = atoi(argv[1]);
 	float tmp_storage;
 	char *file_twoD = argv[2];
@@ -19,11 +19,9 @@ int main (int argc, char *argv[])
 	p_twod = fopen(file_twoD, "r");
 	p_oned = fopen(file_oneD, "w");
 	
-	for ( row = 0; row < side; row++){
-		for ( col = 0; col < side; col++){
-			fscanf(p_twod, "%f", &tmp_storage);
-			fprintf(p_oned,"%d %d %7.2f\n ",row, col, tmp_storage);
-		}
+	for ( cell = 0; cell < side*side; cell++){
+		fscanf(p_twod, "%f", &tmp_storage);
+		fprintf(p_oned,"%7.2f\n ",tmp_storage);
 	}
 	
 	return(0);
