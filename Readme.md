@@ -39,3 +39,7 @@ init ignMap to BEHAVE elipse for faster solution (1 - Yes, 0 - No)
 
 Main output is the ignition map "ignMap_###.dat", where ### is a user 
 defined tag
+
+##Stuff to do
+
+Organise and trash unnecessary test cases cluttering the project
