@@ -6,6 +6,7 @@ A fire growth model (FGM) that runs on NVIDIA GPUs.
 ## fireLib 
 
 The CUDA implementation of the FGM is published in a [scientific paper](http://www.sciencedirect.com/science/article/pii/S1364815212001867)
+and [this one](http://www.techscience.com/doi/10.3970/cmes.2012.089.361.html) is also very good indeed.
 
 firelib is used to create most of the fire properties. Main firelib 
 funcions used are "Fire_FuelCatalogCreateStandard" to create the fire 
