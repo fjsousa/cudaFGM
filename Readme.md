@@ -1,16 +1,18 @@
 #cudaFGM
 
-##A fire growth model (FGM) that runs on NVIDIA GPUs. 
+A fire growth model (FGM) that runs on NVIDIA GPUs. 
+
+ 
+## fireLib 
 
 firelib is used to create most of the fire properties. Main firelib 
 funcions used are "Fire_FuelCatalogCreateStandard" to create the fire 
 catalog, "Fire_SpreadNoWindNoSlope" and "Fire_SpreadWindSlopeMax" are 
 used to compute fire ellipse properties. 
 
-The kernel "FGM" is launched in each iteration of the fire growth model. 
 
-Main output is the ignition map "ignMap_###.dat", where ### is a user 
-defined tag
+
+##Main Inputs
 
 Grass aspect and slope files can be read with "./cudaFGM 1". Grass slope files must be written in "percentage" of rise/reach.
 
@@ -32,3 +34,8 @@ Inputs provided in "RunSet.in":
 * ignition map file name (no spaces)
 * Verbosity (1 - more 0 - less)
 init ignMap to BEHAVE elipse for faster solution (1 - Yes, 0 - No)
+
+##Outputs
+
+Main output is the ignition map "ignMap_###.dat", where ### is a user 
+defined tag
